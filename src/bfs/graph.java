@@ -23,7 +23,7 @@ public class graph {
     ThreadPoolExecutor executor;
     int numThreads;
     Semaphore sem[];
-    
+    Semaphore queueSem = new Semaphore(1);
     
     
     public graph(int v)
@@ -98,8 +98,7 @@ public class graph {
     
     private void bfs(int source, boolean visited[],  LinkedList<Integer> queue, int level[], int parent[], int region)
     {
-        int count = 0;
-        level[source]  = count+1;
+        level[source]  = 1;
         parent[source] = -1 ; 
         visited[source] = true;
         queue.add(source);
@@ -159,18 +158,13 @@ public class graph {
     
    private void parallelBFS(int source, boolean visited[],  LinkedList<Integer> queue, int level[], int parent[], int region) throws InterruptedException
    {
-        int count = 0;
-        level[source]  = count + 1;
+        level[source]  = 1;
         parent[source] = -1 ; 
         visited[source] = true;
         queue.add(source);
-
+        System.out.println("node: " + source + "  parent: -1  level: 1  region: " + region);  
         while(!queue.isEmpty())
-        {   
-
-            int d = count + 1;
-            LinkedList<Integer> sameLevel = new LinkedList();
-
+        {   LinkedList<Integer> sameLevel = new LinkedList();
             while(!queue.isEmpty())
             {     
                 sameLevel.add(queue.poll());
@@ -179,23 +173,19 @@ public class graph {
             
             LinkedList<Integer> queuesForThreads[];
             queuesForThreads = new LinkedList[sameLevel.size()];
+            
             for(int i=0;i<sameLevel.size();i++)
             {
                 queuesForThreads[i] = new LinkedList<>();
                 int node = sameLevel.get(i);
                 Iterator<Integer> neighbours = adjacent[node].listIterator();
 
-                threadTask task = new threadTask( neighbours, node , visited , queuesForThreads[i] ,  level,  parent ,  controll, sem, region);
+                threadTask task = new threadTask( neighbours, node , visited , queue ,  level,  parent ,  controll, sem, queueSem, region);
                 executor.execute(task);
             }
             controll.await();
-            for( LinkedList<Integer> queueForOneThread : queuesForThreads){
-                for(int x : queueForOneThread){
-                    queue.add(x);
-                }
-            }
-            count++;
-       }  
+            
+       }    
         
         
   }
