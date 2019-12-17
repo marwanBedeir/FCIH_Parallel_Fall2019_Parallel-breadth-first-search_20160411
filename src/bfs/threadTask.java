@@ -8,6 +8,9 @@ package bfs;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -17,13 +20,15 @@ public class threadTask implements Runnable
 {   
     int source;
     boolean visited[] ;
-    LinkedList<Integer> queue   ;
+    LinkedList<Integer> queue ;
     Iterator neighbours;
     int level[] ;
     int parent[] ;
     CountDownLatch controll;
-    
-    public threadTask(Iterator neighbours,int source, boolean visited[] , LinkedList<Integer> queue , int level[] , int parent[] , CountDownLatch controll)
+    Semaphore sem[];
+    int region;
+            
+    public threadTask(Iterator neighbours,int source, boolean visited[] , LinkedList<Integer> queue , int level[] , int parent[] , CountDownLatch controll, Semaphore sem[], int region)
     {   
         this.neighbours = neighbours;
         this.source = source;
@@ -32,23 +37,31 @@ public class threadTask implements Runnable
         this.queue = queue;
         this.visited = visited;
         this.controll = controll;
-        
+        this.sem = sem;
+        this.region = region;
     }
 
     @Override
     public void run()
     {   while(neighbours.hasNext())
         {
+            
+        try {
             int node = (int )neighbours.next();
+            sem[node].acquire();
             if (!visited[node])
             {   
+                //System.out.println(source);
                 visited[node] = true;
                 parent[node] = source;
-                level[node] = level[source] + 1 ;               
+                level[node] = level[source] + 1 ;  
                 queue.add(node);
-            System.out.println("node: "+node +"  parent:" + parent[node] + "  level:" + level[node]);  
-
+                System.out.println("node: "+node +"  parent: " + parent[node] + "  level: " + level[node] + "  region: " + region);  
             }
+            sem[node].release();
+        } catch (InterruptedException ex) {
+            Logger.getLogger(threadTask.class.getName()).log(Level.SEVERE, null, ex);
+        }
         }
             
           controll.countDown();

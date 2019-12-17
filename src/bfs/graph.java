@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -21,6 +22,7 @@ public class graph {
     LinkedList<Integer> adjacent[];
     ThreadPoolExecutor executor;
     int numThreads;
+    Semaphore sem[];
     
     
     
@@ -28,136 +30,174 @@ public class graph {
     {
         vertices = v;
         adjacent = new LinkedList[v];
+        sem = new Semaphore[v];
         numThreads=(Runtime.getRuntime().availableProcessors());
         executor = (ThreadPoolExecutor)Executors.newFixedThreadPool(numThreads);
         for (int i = 0 ; i < v ; i++)
         {
             adjacent[i] = new LinkedList();
+            sem[i] = new Semaphore(1);
         }
     }
     
     
     
-        void addEdge(int v1 , int v2)
-        {
-            adjacent[v1].add(v2);
-            
-        }
+    void addEdge(int v1 , int v2)
+    {
+        adjacent[v1].add(v2);
+    }
    
- 
-        
-void bfs(int source)
-{
-    boolean visited[] = new boolean[vertices] ;
-    LinkedList<Integer> queue = new LinkedList();
-    int level[] = new int[vertices];
-    int parent[] = new int[vertices];
-    
-    for (int i =0 ; i < vertices ; i++)
-    {
-        level[i] = -1 ;
+    public static graph createRandomGraph(int numOfVertices, int numOfEdges){
+        graph g = new graph(numOfVertices);
+        for(int i=0; i<numOfEdges;i++){
+            g.addEdge((int)getRandomIntegerBetweenRange(0, numOfVertices-1), (int)getRandomIntegerBetweenRange(0, numOfVertices-1));
+        }
+        return g;
     }
-    int count = 0;
-    level[source]  = count+1;
-    parent[source] = -1 ; 
-    visited[source] = true;
-    queue.add(source);
-    
-    while(queue.size() != 0)
+        
+        
+    public static graph createRandomConnectedGraph(int numOfVertices, int numOfEdgesForOneVertice)
     {
-        source = queue.poll();
+        graph g = new graph(numOfVertices);
+         for(int i=0; i<numOfVertices;i++){
+                if(i!=numOfVertices-1){
+                    g.addEdge(i, i+1);
+                }
+                for(int j=0; j<numOfEdgesForOneVertice;j++){
+                       g.addEdge(i, (int)getRandomIntegerBetweenRange(0, numOfVertices-1));
+                 }
+         }
+        return g;
+    }
         
-        System.out.println("node: "+source +"  parent:" + parent[source] + "  level:" + level[source]);
-        
-        Iterator<Integer> neighbours = adjacent[source].listIterator();
-        while(neighbours.hasNext())
+    public static double getRandomIntegerBetweenRange(double min, double max){
+        double x = (int)(Math.random()*((max-min)+1))+min;
+        return x;
+    }
+   
+    public void startBFS(int source){
+        boolean visited[] = new boolean[vertices] ;
+        LinkedList<Integer> queue = new LinkedList();
+        int level[] = new int[vertices];
+        int parent[] = new int[vertices];
+        int region = 1;
+        for (int i =0 ; i < vertices ; i++)
         {
-            int n = neighbours.next();
-            
-            if (!visited[n])
-            {   
-                parent[n] = source;
-                level[n] = level[source] + 1 ;
-                visited[n] = true;
-                queue.add(n);
+            level[i] = -1 ;
+        }
+        bfs(source, visited, queue, level, parent, region);
+        int i = 0;
+        for(boolean v : visited){
+            if(!v){
+                region++;
+                bfs(i, visited, queue, level, parent, region);
             }
-            
+            i++;
         }
-        
     }
-}
-
-public	void	destroy()
-{
-    executor.shutdown();	
-}
-
-
-   void parallelBFS(int source) throws InterruptedException
-   {
-       
-       
-    boolean visited[] = new boolean[vertices] ;
-    LinkedList<Integer> queue = new LinkedList();
-    int level[] = new int[vertices];
-    int parent[] = new int[vertices];
     
-    for (int i =0 ; i < vertices ; i++)
+    private void bfs(int source, boolean visited[],  LinkedList<Integer> queue, int level[], int parent[], int region)
     {
-        level[i] = -1 ;
-    }
-    int count = 0;
-    level[source]  = count + 1;
-    parent[source] = -1 ; 
-    visited[source] = true;
-    queue.add(source);
-    
-    while(queue.size() != 0)
-    {   
- 
-        int d = count + 1;
-        LinkedList<Integer> sameLevel = new LinkedList();
-    
-        while(queue.size() != 0)
-        {     
-             int peek = queue.peekFirst();
-             
-             if(d == 1)
-             {
-             
-                 System.out.println("node: "+source +"  parent:" + parent[source] + "  level:" + level[source]);
-                 sameLevel.add(peek);
-                 queue.poll();
-             }
-             else
-             {
-                     if(d == level[peek])
-                    {
-                        sameLevel.add(peek);
-                        queue.poll();
-                    }
-                    else
-                    {
-                        break;
-                    }
-             }
-             
-        }
-        
-        CountDownLatch controll = new CountDownLatch(sameLevel.size());
-        
-        for(int i :sameLevel)
+        int count = 0;
+        level[source]  = count+1;
+        parent[source] = -1 ; 
+        visited[source] = true;
+        queue.add(source);
+
+        while(!queue.isEmpty())
         {
-            Iterator<Integer> neighbours = adjacent[i].listIterator();
-            
-            threadTask task = new threadTask( neighbours, i , visited , queue ,  level,  parent ,  controll);
-            executor.execute(task);
+            source = queue.poll();
+
+            System.out.println("node: "+source +"  parent: " + parent[source] + "  level: " + level[source] + "  region: " + region);
+
+            Iterator<Integer> neighbours = adjacent[source].listIterator();
+            while(neighbours.hasNext())
+            {
+                int n = neighbours.next();
+
+                if (!visited[n])
+                {   
+                    parent[n] = source;
+                    level[n] = level[source] + 1 ;
+                    visited[n] = true;
+                    queue.add(n);
+                }
+
+            }
+
         }
-        controll.await();
-        count++;
     }
- 
-       
-   }
+
+    public void destroy()
+    {
+        executor.shutdown();	
+    }
+
+
+    public void startParallelBFS(int source) throws InterruptedException{
+        boolean visited[] = new boolean[vertices] ;
+        LinkedList<Integer> queue = new LinkedList();
+        int level[] = new int[vertices];
+        int parent[] = new int[vertices];
+        int region = 1;
         
+        for (int i =0 ; i < vertices ; i++)
+        {
+            level[i] = -1 ;
+        }
+        parallelBFS(source, visited, queue, level, parent, region);
+        int i = 0;
+        for(boolean v : visited){
+            if(!v){
+                region++;
+                parallelBFS(i, visited, queue, level, parent, region);
+            }
+            i++;
+        }
+    }
+    
+    
+   private void parallelBFS(int source, boolean visited[],  LinkedList<Integer> queue, int level[], int parent[], int region) throws InterruptedException
+   {
+        int count = 0;
+        level[source]  = count + 1;
+        parent[source] = -1 ; 
+        visited[source] = true;
+        queue.add(source);
+
+        while(!queue.isEmpty())
+        {   
+
+            int d = count + 1;
+            LinkedList<Integer> sameLevel = new LinkedList();
+
+            while(!queue.isEmpty())
+            {     
+                sameLevel.add(queue.poll());
+            }
+            CountDownLatch controll = new CountDownLatch(sameLevel.size());
+            
+            LinkedList<Integer> queuesForThreads[];
+            queuesForThreads = new LinkedList[sameLevel.size()];
+            for(int i=0;i<sameLevel.size();i++)
+            {
+                queuesForThreads[i] = new LinkedList<>();
+                int node = sameLevel.get(i);
+                Iterator<Integer> neighbours = adjacent[node].listIterator();
+
+                threadTask task = new threadTask( neighbours, node , visited , queuesForThreads[i] ,  level,  parent ,  controll, sem, region);
+                executor.execute(task);
+            }
+            controll.await();
+            for( LinkedList<Integer> queueForOneThread : queuesForThreads){
+                for(int x : queueForOneThread){
+                    queue.add(x);
+                }
+            }
+            count++;
+       }  
+        
+        
+  }
+   
 }
