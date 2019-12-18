@@ -14,7 +14,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  *
- * @author LEGION
+ * @author MMB
  */
 public class graph {
     
@@ -49,7 +49,8 @@ public class graph {
    
     public static graph createRandomGraph(int numOfVertices, int numOfEdges){
         graph g = new graph(numOfVertices);
-        for(int i=0; i<numOfEdges;i++){
+        for(int i=0; i<numOfEdges;i++)
+        {
             g.addEdge((int)getRandomIntegerBetweenRange(0, numOfVertices-1), (int)getRandomIntegerBetweenRange(0, numOfVertices-1));
         }
         return g;
@@ -81,6 +82,7 @@ public class graph {
         int level[] = new int[vertices];
         int parent[] = new int[vertices];
         int region = 1;
+        
         for (int i =0 ; i < vertices ; i++)
         {
             level[i] = -1 ;
@@ -121,9 +123,7 @@ public class graph {
                     visited[n] = true;
                     queue.add(n);
                 }
-
             }
-
         }
     }
 
@@ -169,25 +169,19 @@ public class graph {
             {     
                 sameLevel.add(queue.poll());
             }
-            CountDownLatch controll = new CountDownLatch(sameLevel.size());
             
-            LinkedList<Integer> queuesForThreads[];
-            queuesForThreads = new LinkedList[sameLevel.size()];
+            CountDownLatch controll = new CountDownLatch(sameLevel.size());
             
             for(int i=0;i<sameLevel.size();i++)
             {
-                queuesForThreads[i] = new LinkedList<>();
                 int node = sameLevel.get(i);
                 Iterator<Integer> neighbours = adjacent[node].listIterator();
 
                 threadTask task = new threadTask( neighbours, node , visited , queue ,  level,  parent ,  controll, sem, queueSem, region);
                 executor.execute(task);
             }
-            controll.await();
-            
+            controll.await();   
        }    
-        
-        
   }
    
 }

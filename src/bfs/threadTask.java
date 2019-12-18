@@ -14,7 +14,7 @@ import java.util.logging.Logger;
 
 /**
  *
- * @author LEGION
+ * @author MMB
  */
 public class threadTask implements Runnable
 {   
